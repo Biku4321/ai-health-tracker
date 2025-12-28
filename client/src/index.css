@@ -1,0 +1,101 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap');
+
+/* [FIX] Removed @import "tailwindcss" */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply font-inter bg-[#F4F7F8] text-gray-800 dark:bg-[#0F172A] dark:text-[#F1F5F9] transition-colors duration-300;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-poppins;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 dark:bg-gray-700 rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-[#4EC5C1];
+}
+
+/* Card Utility Class */
+.card {
+  @apply bg-white dark:bg-[#1E293B] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6;
+}
+
+/* Animated Mesh Gradient Background */
+.mesh-bg {
+  background-color: #F4F7F8;
+  background-image: 
+    radial-gradient(at 40% 20%, hsla(178,100%,54%,0.1) 0px, transparent 50%),
+    radial-gradient(at 80% 0%, hsla(189,100%,56%,0.1) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, hsla(340,100%,76%,0.05) 0px, transparent 50%);
+  background-attachment: fixed;
+}
+.dark .mesh-bg {
+  background-color: #0F172A;
+  background-image: 
+    radial-gradient(at 40% 20%, hsla(178,100%,54%,0.05) 0px, transparent 50%),
+    radial-gradient(at 80% 0%, hsla(189,100%,56%,0.05) 0px, transparent 50%);
+}
+.mood-bg-container {
+  transition: background-image 1.5s ease-in-out;
+  background-size: 200% 200%;
+  animation: gradientMove 15s ease infinite;
+}
+
+@keyframes gradientMove {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* 1. Default (Mint/Slate) */
+.mood-default {
+  background-image: linear-gradient(-45deg, #F4F7F8, #e0f2f1, #F4F7F8);
+}
+.dark .mood-default {
+  background-image: linear-gradient(-45deg, #0F172A, #1E293B, #0F172A);
+}
+
+/* 2. Warm (Happy/Energetic) */
+.mood-warm {
+  background-image: linear-gradient(-45deg, #fff3e0, #ffcc80, #ffe0b2);
+}
+.dark .mood-warm {
+  background-image: linear-gradient(-45deg, #4a3b2a, #7c4d1e, #3f2e18);
+}
+
+/* 3. Intense (Stressed/Angry) */
+.mood-intense {
+  background-image: linear-gradient(-45deg, #ffebee, #ef9a9a, #ffcdd2);
+}
+.dark .mood-intense {
+  background-image: linear-gradient(-45deg, #3f1818, #632b2b, #2a1212);
+}
+
+/* 4. Calm (Relaxed/Focused) */
+.mood-calm {
+  background-image: linear-gradient(-45deg, #e0f2f1, #80cbc4, #b2dfdb);
+}
+.dark .mood-calm {
+  background-image: linear-gradient(-45deg, #134e4a, #2D5C63, #1A3C40);
+}
+
+/* 5. Cool (Sad/Tired) */
+.mood-cool {
+  background-image: linear-gradient(-45deg, #e3f2fd, #90caf9, #bbdefb);
+}
+.dark .mood-cool {
+  background-image: linear-gradient(-45deg, #0c2546, #1e3a8a, #0f172a);
+}
