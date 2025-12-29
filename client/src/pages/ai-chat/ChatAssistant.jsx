@@ -6,7 +6,7 @@ import { Send, Bot, User, Sparkles, Loader2 } from 'lucide-react'; // Added Load
 
 const ChatAssistant = () => {
   const { user } = useAuth();
-  const { socket } = useSocket();
+  const { socket,isConnected } = useSocket();
   const messagesEndRef = useRef(null);
 
   const [messages, setMessages] = useState([
@@ -88,7 +88,7 @@ const ChatAssistant = () => {
     setIsTyping(true);
 
     // 2. Emit to Server
-    if (socket && socket.connected) {
+    if (socket && isConnected) {
       socket.emit('chat_message', { message: messageToSend, userId: user._id });
     } else {
       // Fallback if socket is disconnected
@@ -118,8 +118,11 @@ const ChatAssistant = () => {
         <div>
           <h2 className="font-poppins font-bold text-white text-lg">AI Health Coach</h2>
           <div className="flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${socket?.connected ? 'bg-green-400 animate-pulse' : 'bg-red-500'}`}></span>
-            <p className="text-xs text-gray-300 font-medium">{socket?.connected ? 'Online & Ready' : 'Connecting...'}</p>
+            {/* [NEW] Use isConnected state for UI */}
+            <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400 animate-pulse' : 'bg-red-500'}`}></span>
+            <p className="text-xs text-gray-300 font-medium">
+              {isConnected ? 'Online & Ready' : 'Connecting...'}
+            </p>
           </div>
         </div>
       </div>
