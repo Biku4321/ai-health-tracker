@@ -1,7 +1,7 @@
-import { createContext, useContext, useEffect, useState } from 'react';
-import { io } from 'socket.io-client';
-import { useAuth } from './AuthContext';
-import Toastify from 'toastify-js';
+import { createContext, useContext, useEffect, useState } from "react";
+import { io } from "socket.io-client";
+import { useAuth } from "./AuthContext";
+import Toastify from "toastify-js";
 import "toastify-js/src/toastify.css";
 
 const SocketContext = createContext();
@@ -12,25 +12,30 @@ export const SocketProvider = ({ children }) => {
 
   useEffect(() => {
     if (user && !socket) {
-      // FIX: Explicitly point to backend port 5000
-      // If you use the proxy in vite.config.js, you can also use '/' 
-      // but explicit URL is safer for debugging.
-      const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      
+      const SOCKET_URL = "https://ai-health-tracker-56st.onrender.com";
+
+      console.log("🔌 Connecting to:", SOCKET_URL);
+
       const newSocket = io(SOCKET_URL, {
         auth: { token: user.token },
-        transports: ['websocket', 'polling'], // Try websocket first
-        withCredentials: true
+        // [CRITICAL] FORCE polling. This prevents the 'wss://' error completely.
+        transports: ["polling"],
+        withCredentials: false
       });
 
       setSocket(newSocket);
 
-      newSocket.on('connect_error', (err) => {
-        console.error("Socket Connection Error:", err);
+      newSocket.on("connect", () => {
+        console.log("✅ Connected via Polling:", newSocket.id);
       });
 
-      // Global Notification Listener
-      newSocket.on('notification', (data) => {
+      newSocket.on("connect_error", (err) => {
+        // Log the exact cause
+        console.error("❌ Connection Error:", err.message);
+        // Look at the Network tab in DevTools for the real response!
+      });
+
+      newSocket.on("notification", (data) => {
         Toastify({
           text: data.message,
           duration: 4000,
@@ -39,14 +44,16 @@ export const SocketProvider = ({ children }) => {
           style: {
             background: "linear-gradient(to right, #1A3C40, #4EC5C1)",
             borderRadius: "12px",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
-          }
+          },
         }).showToast();
       });
 
-      return () => newSocket.disconnect();
+      return () => {
+        newSocket.disconnect();
+        setSocket(null);
+      };
     }
-  }, [user, socket]);
+  }, [user]);
 
   return (
     <SocketContext.Provider value={{ socket }}>
