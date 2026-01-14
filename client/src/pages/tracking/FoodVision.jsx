@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Camera, Loader2, CheckCircle, X } from 'lucide-react';
-import api from '../../services/api'; // Use your existing API service
+import api from '../../services/api'; 
 
 const FoodVision = ({ onLogSuccess }) => {
   const [image, setImage] = useState(null);

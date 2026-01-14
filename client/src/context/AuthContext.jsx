@@ -1,4 +1,5 @@
 import { createContext, useState, useEffect, useContext } from 'react';
+import authService from '../services/authService'; 
 
 const AuthContext = createContext();
 
@@ -7,8 +8,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check local storage for persisted login
-    const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+    const userInfo = authService.getCurrentUser();
     if (userInfo) {
       setUser(userInfo);
     }
@@ -18,16 +18,37 @@ export const AuthProvider = ({ children }) => {
   const login = (userData) => {
     const enhancedUser = { ...userData, role: userData.role || 'user' }; 
     setUser(enhancedUser);
+
     localStorage.setItem('userInfo', JSON.stringify(enhancedUser));
   };
 
+  const googleLogin = async (credential) => {
+    try {
+      const data = await authService.googleLogin(credential);
+      setUser(data);
+      return { success: true };
+    } catch (error) {
+      console.error("Google Auth Error:", error);
+      return { 
+        success: false, 
+        error: error.response?.data?.message || "Google Login Failed" 
+      };
+    }
+  };
+
   const logout = () => {
+    authService.logout();
     setUser(null);
-    localStorage.removeItem('userInfo');
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      loading, 
+      login, 
+      logout,
+      googleLogin 
+    }}>
       {!loading && children}
     </AuthContext.Provider>
   );

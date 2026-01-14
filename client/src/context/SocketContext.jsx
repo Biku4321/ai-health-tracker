@@ -9,23 +9,23 @@ const SocketContext = createContext();
 export const SocketProvider = ({ children }) => {
   const { user } = useAuth();
   const [socket, setSocket] = useState(null);
-  const [isConnected, setIsConnected] = useState(false); // [NEW] Track connection status
+  const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
     if (user && !socket) {
-      const SOCKET_URL = "https://ai-health-tracker-56st.onrender.com";
-      console.log("🔌 Connecting to:", SOCKET_URL);
+      const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
+      
+      console.log("🔌 Connecting to Socket:", SOCKET_URL);
 
       const newSocket = io(SOCKET_URL, {
         auth: { token: user.token }, 
-        transports: ['polling'], 
-        withCredentials: false, 
+        transports: ['polling', 'websocket'],
+        withCredentials: true, 
         reconnectionAttempts: 5,
       });
 
       setSocket(newSocket);
 
-      // [NEW] Listen for connection events to update React State
       newSocket.on('connect', () => {
         console.log("✅ Socket Connected:", newSocket.id);
         setIsConnected(true);
@@ -37,7 +37,7 @@ export const SocketProvider = ({ children }) => {
       });
 
       newSocket.on('connect_error', (err) => {
-        console.error("❌ Connection Error:", err.message);
+        console.error("❌ Socket Connection Error:", err.message);
         setIsConnected(false);
       });
 
@@ -62,7 +62,6 @@ export const SocketProvider = ({ children }) => {
     }
   }, [user]);
 
-  // Expose isConnected to the rest of the app
   return (
     <SocketContext.Provider value={{ socket, isConnected }}>
       {children}

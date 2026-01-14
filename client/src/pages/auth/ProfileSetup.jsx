@@ -1,18 +1,43 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import authService from '../../services/authService';
 import { useNavigate } from 'react-router-dom';
+import { User, Lock, Activity, Target, AlertTriangle, CheckCircle, Ruler, Weight } from 'lucide-react';
 
 const ProfileSetup = () => {
-  const { user, login } = useAuth(); // We update the user context after saving
+  const { user, login } = useAuth();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [warning, setWarning] = useState('');
 
   const [formData, setFormData] = useState({
+    name: '',
     age: '',
-    gender: 'Male',
     height: '',
     weight: '',
     goal: 'General Fitness',
+    password: '',
+    confirmPassword: ''
   });
+
+  // Load existing user data
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        name: user.name || '',
+        age: user.age || '',
+        height: user.height || '',
+        weight: user.weight || '',
+        goal: user.goal || 'General Fitness',
+      }));
+
+      // Check if profile is incomplete (Logic for new signups)
+      if (!user.age || !user.height || !user.weight) {
+        setWarning("⚠️ Please complete your profile to unlock the Dashboard & AI features.");
+      }
+    }
+  }, [user]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -20,103 +45,181 @@ const ProfileSetup = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // In a real app, call your API service here:
-    // const res = await axios.put('/api/auth/profile', formData, { headers: { Authorization: `Bearer ${user.token}` } });
-    
-    // Simulating API success for demo:
-    console.log("Profile Updated:", formData);
-    login({ ...user, ...formData }); // Update local context
-    navigate('/dashboard'); // Redirect to main app
+    setLoading(true);
+
+    // Password Validation (only if user is trying to change it)
+    if (formData.password && formData.password !== formData.confirmPassword) {
+      alert("❌ Passwords do not match!");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Clean data before sending
+      const { confirmPassword, ...dataToSend } = formData;
+      if (!dataToSend.password) delete dataToSend.password; // Don't send empty password
+
+      const updatedUser = await authService.updateProfile(dataToSend);
+      
+      // Update Context & Redirect
+      login(updatedUser); 
+      // alert("✅ Profile Updated Successfully!");
+      navigate('/dashboard'); 
+    } catch (error) {
+      console.error("Profile Update Error:", error);
+      alert("❌ Failed to update profile. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F4F7F8] px-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-[#F4F7F8] dark:bg-dark-bg px-4 py-12 transition-colors">
+      <div className="max-w-2xl w-full bg-white dark:bg-dark-card rounded-3xl shadow-xl overflow-hidden border border-gray-100 dark:border-gray-700">
         
         {/* Header Section */}
-        <div className="bg-gradient-to-r from-[#1A3C40] to-[#2D5C63] p-6 text-center">
+        <div className="bg-gradient-to-r from-[#1A3C40] to-[#2D5C63] p-8 text-center relative">
           <h2 className="text-3xl font-poppins font-bold text-white mb-2">
-            Let's Personalize
+            Profile Settings
           </h2>
           <p className="text-[#4EC5C1] text-sm">
-            Help our AI understand your body & goals.
+            Keep your health data accurate for better AI insights.
           </p>
         </div>
 
+        {/* Warning Banner for New Users */}
+        {warning && (
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-100 dark:border-yellow-800 p-4 flex items-center justify-center gap-2 text-yellow-700 dark:text-yellow-400 text-sm font-medium animate-pulse">
+            <AlertTriangle size={18} />
+            {warning}
+          </div>
+        )}
+
         {/* Form Section */}
-        <form onSubmit={handleSubmit} className="p-8 space-y-5">
+        <form onSubmit={handleSubmit} className="p-8 space-y-6">
           
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-gray-600 text-sm font-semibold mb-1">Age</label>
-              <input
-                type="number"
-                name="age"
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#4EC5C1] outline-none bg-gray-50"
-                placeholder="25"
-                onChange={handleChange}
-                required
-              />
+          {/* Section 1: Basic Info */}
+          <div className="space-y-4">
+            <h3 className="text-gray-800 dark:text-white font-bold text-lg flex items-center gap-2 border-b pb-2 dark:border-gray-700">
+              <User size={20} className="text-[#4EC5C1]" /> Personal Details
+            </h3>
+            
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-gray-600 dark:text-gray-300 text-sm font-semibold mb-2">Full Name</label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-[#4EC5C1] outline-none bg-gray-50 dark:bg-gray-800 dark:text-white"
+                  placeholder="John Doe"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-gray-600 dark:text-gray-300 text-sm font-semibold mb-2">Age</label>
+                <input
+                  type="number"
+                  name="age"
+                  value={formData.age}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-[#4EC5C1] outline-none bg-gray-50 dark:bg-gray-800 dark:text-white"
+                  placeholder="25"
+                  required
+                />
+              </div>
             </div>
+          </div>
+
+          {/* Section 2: Body Stats */}
+          <div className="space-y-4">
+            <h3 className="text-gray-800 dark:text-white font-bold text-lg flex items-center gap-2 border-b pb-2 dark:border-gray-700">
+              <Activity size={20} className="text-[#4EC5C1]" /> Body Metrics
+            </h3>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-gray-600 dark:text-gray-300 text-sm font-semibold mb-2 flex items-center gap-1">
+                  <Ruler size={14} /> Height (cm)
+                </label>
+                <input
+                  type="number"
+                  name="height"
+                  value={formData.height}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-[#4EC5C1] outline-none bg-gray-50 dark:bg-gray-800 dark:text-white"
+                  placeholder="175"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-gray-600 dark:text-gray-300 text-sm font-semibold mb-2 flex items-center gap-1">
+                  <Weight size={14} /> Weight (kg)
+                </label>
+                <input
+                  type="number"
+                  name="weight"
+                  value={formData.weight}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-[#4EC5C1] outline-none bg-gray-50 dark:bg-gray-800 dark:text-white"
+                  placeholder="70"
+                  required
+                />
+              </div>
+            </div>
+
             <div>
-              <label className="block text-gray-600 text-sm font-semibold mb-1">Gender</label>
+              <label className="block text-gray-600 dark:text-gray-300 text-sm font-semibold mb-2 flex items-center gap-1">
+                <Target size={14} /> Primary Goal
+              </label>
               <select
-                name="gender"
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#4EC5C1] outline-none bg-gray-50"
+                name="goal"
+                value={formData.goal}
                 onChange={handleChange}
+                className="w-full px-4 py-3 border dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-[#4EC5C1] outline-none bg-gray-50 dark:bg-gray-800 dark:text-white cursor-pointer"
               >
-                <option>Male</option>
-                <option>Female</option>
-                <option>Other</option>
+                <option>General Fitness</option>
+                <option>Weight Loss</option>
+                <option>Weight Gain</option>
+                <option>Mental Wellness</option>
+                <option>Build Muscle</option>
               </select>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-gray-600 text-sm font-semibold mb-1">Height (cm)</label>
+          {/* Section 3: Security (Optional) */}
+          <div className="space-y-4">
+            <h3 className="text-gray-800 dark:text-white font-bold text-lg flex items-center gap-2 border-b pb-2 dark:border-gray-700">
+              <Lock size={20} className="text-[#4EC5C1]" /> Security <span className="text-xs text-gray-400 font-normal ml-auto">(Optional: Leave blank to keep current)</span>
+            </h3>
+            
+            <div className="grid md:grid-cols-2 gap-4">
               <input
-                type="number"
-                name="height"
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#4EC5C1] outline-none bg-gray-50"
-                placeholder="175"
+                type="password"
+                name="password"
+                value={formData.password}
                 onChange={handleChange}
-                required
+                className="w-full px-4 py-3 border dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-[#4EC5C1] outline-none bg-gray-50 dark:bg-gray-800 dark:text-white"
+                placeholder="New Password"
+              />
+              <input
+                type="password"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                className="w-full px-4 py-3 border dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-[#4EC5C1] outline-none bg-gray-50 dark:bg-gray-800 dark:text-white"
+                placeholder="Confirm Password"
               />
             </div>
-            <div>
-              <label className="block text-gray-600 text-sm font-semibold mb-1">Weight (kg)</label>
-              <input
-                type="number"
-                name="weight"
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#4EC5C1] outline-none bg-gray-50"
-                placeholder="70"
-                onChange={handleChange}
-                required
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-gray-600 text-sm font-semibold mb-1">Primary Goal</label>
-            <select
-              name="goal"
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#4EC5C1] outline-none bg-gray-50"
-              onChange={handleChange}
-            >
-              <option>General Fitness</option>
-              <option>Weight Loss</option>
-              <option>Weight Gain</option>
-              <option>Mental Wellness</option>
-              <option>Build Muscle</option>
-            </select>
           </div>
 
           <button
             type="submit"
-            className="w-full bg-[#4EC5C1] text-[#1A3C40] font-bold py-3 rounded-xl hover:bg-[#3daea9] transition duration-300 shadow-md mt-4"
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-[#1A3C40] to-[#2D5C63] text-white font-bold py-4 rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed mt-6"
           >
-            Complete Setup 🚀
+            {loading ? 'Saving...' : <><CheckCircle size={20} /> Save & Continue</>}
           </button>
         </form>
       </div>
@@ -125,73 +228,3 @@ const ProfileSetup = () => {
 };
 
 export default ProfileSetup;
-// import { useState } from 'react';
-// import { useAuth } from '../../context/AuthContext';
-// import authService from '../../services/authService'; // Use authService
-// import { Save } from 'lucide-react';
-
-// const Settings = () => {
-//   const { user, login } = useAuth(); // login updates the context
-//   const [formData, setFormData] = useState({
-//     name: user?.name || '',
-//     email: user?.email || '',
-//     age: user?.age || '',
-//     height: user?.height || '',
-//     weight: user?.weight || '',
-//     goal: user?.goal || 'General Fitness'
-//   });
-
-//   const handleUpdate = async (e) => {
-//     e.preventDefault();
-//     try {
-//       // Calls PUT /api/auth/profile
-//       const updatedUser = await authService.updateProfile(formData);
-//       login(updatedUser); // Update global context with new data
-//       alert("✅ Profile Updated Successfully!");
-//     } catch (error) {
-//       alert("❌ Update failed");
-//     }
-//   };
-
-//   return (
-//     <div className="p-6 max-w-4xl mx-auto space-y-6">
-//       <h1 className="text-3xl font-bold text-secondary dark:text-white">Settings</h1>
-      
-//       <form onSubmit={handleUpdate} className="bg-white dark:bg-dark-card p-6 rounded-2xl shadow-glass border border-gray-100 dark:border-gray-700 space-y-4">
-//         <h2 className="font-bold text-lg mb-4 text-secondary dark:text-white">Profile Details</h2>
-        
-//         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//           <div>
-//             <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
-//             <input 
-//               type="text" 
-//               value={formData.name} 
-//               onChange={(e) => setFormData({...formData, name: e.target.value})}
-//               className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 dark:text-white"
-//             />
-//           </div>
-//           <div>
-//             <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Goal</label>
-//             <select 
-//               value={formData.goal}
-//               onChange={(e) => setFormData({...formData, goal: e.target.value})}
-//               className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 dark:text-white"
-//             >
-//               <option>General Fitness</option>
-//               <option>Weight Loss</option>
-//               <option>Weight Gain</option>
-//               <option>Mental Wellness</option>
-//             </select>
-//           </div>
-//           {/* Add inputs for Age, Height, Weight similarly */}
-//         </div>
-
-//         <button type="submit" className="bg-primary text-secondary px-6 py-3 rounded-xl font-bold hover:bg-[#3daea9] transition flex items-center gap-2">
-//           <Save size={18} /> Save Changes
-//         </button>
-//       </form>
-//     </div>
-//   );
-// };
-
-// export default Settings;

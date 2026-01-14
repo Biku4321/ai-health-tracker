@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import DOMPurify from 'dompurify';
-import { Send, Bot, User, Sparkles, Loader2 } from 'lucide-react'; // Added Loader2
+import { Send, Bot, User, Sparkles, Loader2 } from 'lucide-react'; // 
 
 const ChatAssistant = () => {
   const { user } = useAuth();
@@ -56,7 +56,7 @@ const ChatAssistant = () => {
       setIsTyping(false);
     };
 
-    // [FIX] Handle Errors to stop loading state
+    //  Handle Errors to stop loading state
     const handleError = (err) => {
       console.error("AI Chat Error:", err);
       setMessages(prev => [...prev, { role: 'assistant', content: "⚠️ I'm having trouble connecting to the server. Please try again later.", isComplete: true }]);
