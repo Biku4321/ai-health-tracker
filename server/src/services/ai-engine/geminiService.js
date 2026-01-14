@@ -1,29 +1,37 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const DailyLog = require("../../models/DailyLog");
+require("dotenv").config(); 
+
+console.log("---------------------------------------------------");
+console.log("🔑 Gemini Service Init:");
+if (!process.env.GEMINI_API_KEY) {
+  console.error("❌ ERROR: GEMINI_API_KEY is MISSING in process.env");
+} else {
+  console.log("✅ API Key Loaded Successfully (Length: " + process.env.GEMINI_API_KEY.length + ")");
+}
+console.log("---------------------------------------------------");
 
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// [FIX] Use specific model version 'gemini-1.5-flash-001' to avoid 404 errors
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
 /**
  * Streams response to Socket.io client
  */
 const streamGeminiResponse = async (userId, userQuery, socket) => {
-  const logs = await DailyLog.find({ user: userId })
-    .sort({ date: -1 })
-    .limit(3);
-  const contextData = JSON.stringify(logs);
-
-  const systemPrompt = `
-    You are an empathetic AI Health Coach.
-    Current User Context: ${contextData}
-    User Question: ${userQuery}
-    Answer concisely in Markdown.
-  `;
-
   try {
+    const logs = await DailyLog.find({ user: userId }).sort({ date: -1 }).limit(3);
+    const contextData = JSON.stringify(logs);
+
+    const systemPrompt = `
+      You are an empathetic AI Health Coach.
+      Current User Context: ${contextData}
+      User Question: ${userQuery}
+      Answer concisely in Markdown.
+    `;
+
     const result = await model.generateContentStream(systemPrompt);
     for await (const chunk of result.stream) {
       socket.emit("ai_stream_chunk", chunk.text());
@@ -31,23 +39,21 @@ const streamGeminiResponse = async (userId, userQuery, socket) => {
     socket.emit("ai_stream_end");
   } catch (error) {
     console.error("Gemini Stream Error:", error);
-    socket.emit("error", "AI Service Unavailable");
+    socket.emit("error", "AI Service Unavailable: " + error.message);
   }
 };
 
 const generateHealthInsight = async (userId, userQuery = "") => {
-  const logs = await DailyLog.find({ user: userId })
-    .sort({ date: -1 })
-    .limit(3);
-  const contextData = JSON.stringify(logs);
-  const prompt = `Context: ${contextData}. Question: ${userQuery}. Provide a health insight.`;
-
   try {
+    const logs = await DailyLog.find({ user: userId }).sort({ date: -1 }).limit(3);
+    const contextData = JSON.stringify(logs);
+    const prompt = `Context: ${contextData}. Question: ${userQuery}. Provide a health insight.`;
+
     const result = await model.generateContent(prompt);
     return result.response.text();
   } catch (error) {
-    console.error("Gemini Insight Error:", error);
-    return "I couldn't generate an insight right now.";
+    console.error("Gemini Insight Error Details:", error); // Detailed log
+    return "I couldn't generate an insight right now. Error: " + error.message;
   }
 };
 
@@ -67,11 +73,7 @@ const analyzeJournalEntry = async (text) => {
     return null;
   }
 };
-/**
- * VISION ANALYSIS: Analyze food image for calories/macros
- * @param {Buffer} imageBuffer - The raw image data
- * @param {String} mimeType - e.g., 'image/jpeg'
- */
+
 const analyzeImageContent = async (imageBuffer, mimeType) => {
   const prompt = `
     Analyze this image of food. 
@@ -83,11 +85,7 @@ const analyzeImageContent = async (imageBuffer, mimeType) => {
     {
       "foodName": "Dish Name",
       "calories": 0,
-      "macros": {
-        "protein": 0,
-        "carbs": 0,
-        "fats": 0
-      }
+      "macros": { "protein": 0, "carbs": 0, "fats": 0 }
     }
   `;
 
@@ -103,7 +101,6 @@ const analyzeImageContent = async (imageBuffer, mimeType) => {
     const response = await result.response;
     const text = response.text();
 
-    // Clean and parse JSON
     const jsonString = text.replace(/```json|```/g, "").trim();
     return JSON.parse(jsonString);
   } catch (error) {
@@ -111,21 +108,10 @@ const analyzeImageContent = async (imageBuffer, mimeType) => {
     throw new Error("Failed to analyze image");
   }
 };
-/**
- * VOICE ANALYSIS: Transcribe and Extract Data from Audio
- * @param {Buffer} audioBuffer
- * @param {String} mimeType
- */
+
 const analyzeAudioContent = async (audioBuffer, mimeType) => {
   const prompt = `
-    Listen to this health log. Extract the following fields into JSON:
-    1. Mood (label: Happy, Sad, etc., score: 1-10, note: string)
-    2. Sleep (hours: number, quality: Poor/Fair/Good/Excellent)
-    3. Exercise (activity: string, durationMinutes: number, intensity: Low/Medium/High)
-    4. Diet (summary string of what they ate)
-
-    If a field is not mentioned, use null or 0.
-    
+    Listen to this health log. Extract: Mood, Sleep, Exercise, Diet.
     Return JSON ONLY:
     {
       "mood": { "score": 5, "label": "Neutral", "note": "" },
@@ -154,6 +140,7 @@ const analyzeAudioContent = async (audioBuffer, mimeType) => {
     throw new Error("Failed to analyze voice log");
   }
 };
+
 module.exports = {
   generateHealthInsight,
   analyzeJournalEntry,

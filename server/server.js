@@ -3,7 +3,7 @@ dotenv.config();
 const express = require("express");
 const cors = require("cors");
 const http = require("http");
-const { Server } = require("socket.io");
+const { Server } = require('socket.io');
 const jwt = require("jsonwebtoken"); // [ADDED] Required for Auth Middleware
 const connectDB = require("./src/config/db");
 const {
@@ -18,16 +18,20 @@ const app = express();
 const server = http.createServer(app);
 
 // Express Middleware
-app.use(cors());
+app.use(cors({
+  origin: "http://localhost:5173", // Frontend URL (Exact match, no slash at end)
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true // Important for cookies/headers
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 // Initialize Socket.io
 const io = new Server(server, {
   cors: {
-    origin: "*",          // Allow connection from any URL (Vercel/Localhost)
-    methods: ["GET", "POST"],
-    credentials: false    // Must be false if origin is "*"
+    origin: "http://localhost:5173",         // Allow connection from any URL (Vercel/Localhost)
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true    // Must be false if origin is "*"
   },
 });
 
